@@ -50,7 +50,7 @@ public class ClienteRestController {
 		}
 						
 		if (cliente == null) {
-			response.put("mensaje", "El cliente ID: ".concat(id.toString().concat("no existe en la base de datos!")));
+			response.put("mensaje", "El cliente ID: ".concat(id.toString().concat(" no existe en la base de datos!")));
 			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.NOT_FOUND);
 		}
 		return new ResponseEntity<Cliente>(cliente, HttpStatus.OK);
@@ -80,20 +80,49 @@ public class ClienteRestController {
 	
 	/*metodo para actualizar cliente*/
 	@PutMapping("/clientes/{id}")
-	@ResponseStatus(HttpStatus.CREATED)
-	public Cliente Update(@RequestBody Cliente cliente, @PathVariable Long id) {
+	public ResponseEntity<?> Update(@RequestBody Cliente cliente, @PathVariable Long id) {
+		Map<String, Object> response = new HashMap<>();
 		Cliente clienteActual = clienteService.findById(id);
+		Cliente clienteUpdate = null;
 		
+		if (clienteActual == null) {
+			response.put("mensaje", "Error no se pudo editar, el cliente ID: ".concat(id.toString().concat(" no existe en la base de datos!")));
+			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.NOT_FOUND);
+		}
+		
+		try {
 		clienteActual.setApellido(cliente.getApellido());
 		clienteActual.setNombre(cliente.getNombre());
 		clienteActual.setEmail(cliente.getEmail());
-		return clienteService.save(clienteActual);
+		clienteActual.setCreateAt(cliente.getCreateAt());
+		
+		clienteUpdate = clienteService.save(clienteActual);
+		}catch(DataAccessException e) {
+			response.put("mensaje", "Error al actualizar en la base de datos");
+			response.put("error", e.getMessage().concat(": ").concat(e.getMostSpecificCause().getMessage()));
+			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+		
+		response.put("mensaje", "El cliente ha sido actualizado con exito");
+		response.put("cliente", clienteUpdate);
+		return new ResponseEntity<Map<String, Object>>(response, HttpStatus.CREATED);
 	}
+	
+	
 	
 	/* metodo para eliminar cliente*/
 	@DeleteMapping("/clientes/{id}")
-	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public void delete(@PathVariable Long id) {
-		clienteService.delete(id);
+	public ResponseEntity<?> delete(@PathVariable Long id) {
+		Map<String, Object> response = new HashMap<>();
+		try {
+			clienteService.delete(id);
+		} catch (DataAccessException e) {
+			response.put("mensaje", "Error al eliminar en la base de datos");
+			response.put("error", e.getMessage().concat(": ").concat(e.getMostSpecificCause().getMessage()));
+			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+		response.put("mensaje", "El cliente ha sido eliminado con éxito");
+		return new ResponseEntity<Map<String, Object>>(response, HttpStatus.OK);
+		
 	}
 }
